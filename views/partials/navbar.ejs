@@ -1,0 +1,23 @@
+<header class="navbar-header">
+  <nav class="navbar container">
+    <a href="/dashboard" class="nav-brand">
+      <div class="brand-icon">
+        <i class="fa-solid fa-square-check"></i>
+      </div>
+      <span class="brand-text">Task<span class="highlight-brand">Pulse</span></span>
+    </a>
+
+    <div class="nav-menu">
+      <% if (locals.user) { %>
+        <a href="/dashboard" class="nav-link nav-link-active">Dashboard</a>
+        <a href="/tasks/add" class="btn btn-cta">
+          <i class="fa-solid fa-plus"></i> New Task
+        </a>
+        <a href="/logout" class="nav-link nav-link-logout">Logout</a>
+      <% } else { %>
+        <a href="/login" class="nav-link">Login</a>
+        <a href="/signup" class="btn btn-cta">Get Started</a>
+      <% } %>
+    </div>
+  </nav>
+</header>

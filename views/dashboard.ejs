@@ -1,0 +1,184 @@
+<%- include('partials/header') %>
+<%- include('partials/navbar') %>
+
+<main class="dashboard-container container">
+  <!-- Welcome Hero Section -->
+  <div class="dashboard-hero card-glass">
+    <div class="hero-content">
+      <h1>Hello, <%= user.name %></h1>
+      <p>Here is your current assignment overview and upcoming deadlines.</p>
+    </div>
+    <div class="hero-action">
+      <a href="/tasks/add" class="btn btn-cta btn-lg">
+        <i class="fa-solid fa-plus"></i> Add New Task
+      </a>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <% if (error) { %>
+    <div class="alert alert-danger">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span><%= error %></span>
+    </div>
+  <% } %>
+
+  <% if (success) { %>
+    <div class="alert alert-success">
+      <i class="fa-solid fa-circle-check"></i>
+      <span><%= success %></span>
+    </div>
+  <% } %>
+
+  <!-- Status Cards Grid -->
+  <div class="stats-grid">
+    <div class="stat-card card-glass">
+      <div class="stat-header">
+        <span class="stat-label">Total Assignments</span>
+        <div class="icon-badge icon-badge-blue"><i class="fa-solid fa-list-check"></i></div>
+      </div>
+      <div class="stat-value"><%= stats.total %></div>
+    </div>
+
+    <div class="stat-card card-glass">
+      <div class="stat-header">
+        <span class="stat-label">Pending</span>
+        <div class="icon-badge icon-badge-amber"><i class="fa-solid fa-clock"></i></div>
+      </div>
+      <div class="stat-value"><%= stats.pending %></div>
+    </div>
+
+    <div class="stat-card card-glass">
+      <div class="stat-header">
+        <span class="stat-label">Completed</span>
+        <div class="icon-badge icon-badge-green"><i class="fa-solid fa-circle-check"></i></div>
+      </div>
+      <div class="stat-value"><%= stats.completed %></div>
+    </div>
+
+    <div class="stat-card card-glass">
+      <div class="stat-header">
+        <span class="stat-label">Overdue</span>
+        <div class="icon-badge icon-badge-red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      </div>
+      <div class="stat-value"><%= stats.overdue %></div>
+    </div>
+  </div>
+
+  <!-- Embedded Search and Filter Toolbar -->
+  <div class="toolbar-section card-glass">
+    <div class="filter-pills">
+      <a href="/dashboard" class="filter-pill <%= currentFilter === 'all' ? 'active' : '' %>">
+        All Tasks
+      </a>
+      <a href="/dashboard?status=Pending" class="filter-pill <%= currentFilter === 'Pending' ? 'active' : '' %>">
+        Pending
+      </a>
+      <a href="/dashboard?status=Completed" class="filter-pill <%= currentFilter === 'Completed' ? 'active' : '' %>">
+        Completed
+      </a>
+    </div>
+
+    <form action="/dashboard" method="GET" class="search-form">
+      <% if (currentFilter !== 'all') { %>
+        <input type="hidden" name="status" value="<%= currentFilter %>" />
+      <% } %>
+      <div class="search-input-wrapper">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input 
+          type="text" 
+          name="search" 
+          placeholder="Search tasks..." 
+          value="<%= searchQuery %>"
+          class="form-control search-input"
+        />
+        <% if (searchQuery) { %>
+          <a href="/dashboard<%= currentFilter !== 'all' ? '?status=' + currentFilter : '' %>" class="search-clear">
+            <i class="fa-solid fa-xmark"></i>
+          </a>
+        <% } %>
+      </div>
+      <button type="submit" class="btn btn-secondary">Search</button>
+    </form>
+  </div>
+
+  <!-- Task Cards Grid -->
+  <div class="tasks-section">
+    <% if (tasks.length === 0) { %>
+      <div class="empty-state card-glass">
+        <div class="empty-icon">
+          <i class="fa-regular fa-folder-open"></i>
+        </div>
+        <h3>No Tasks Found</h3>
+        <p>
+          <% if (searchQuery) { %>
+            No tasks match "<%= searchQuery %>".
+          <% } else if (currentFilter !== 'all') { %>
+            You have no tasks marked as <%= currentFilter %>.
+          <% } else { %>
+            You haven't created any assignments yet.
+          <% } %>
+        </p>
+        <a href="/tasks/add" class="btn btn-cta btn-sm mt-3">
+          <i class="fa-solid fa-plus"></i> Add New Task
+        </a>
+      </div>
+    <% } else { %>
+      <div class="tasks-grid">
+        <% tasks.forEach(task => { %>
+          <% 
+            const dueDateObj = new Date(task.dueDate);
+            const now = new Date();
+            const isOverdue = task.status === 'Pending' && dueDateObj < now;
+            const formattedDate = dueDateObj.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
+            });
+          %>
+          <div class="task-card card-glass <%= task.status === 'Completed' ? 'is-completed' : '' %>">
+            <div class="task-card-header">
+              <span class="badge <%= task.status === 'Completed' ? 'badge-completed' : (isOverdue ? 'badge-overdue' : 'badge-pending') %>">
+                <%= task.status === 'Completed' ? 'COMPLETED' : (isOverdue ? 'OVERDUE' : 'PENDING') %>
+              </span>
+
+              <div class="task-actions">
+                <form action="/tasks/toggle/<%= task._id %>" method="POST" class="inline-form">
+                  <button type="submit" class="action-btn" title="<%= task.status === 'Completed' ? 'Mark as Pending' : 'Mark as Completed' %>">
+                    <i class="fa-solid <%= task.status === 'Completed' ? 'fa-rotate-left' : 'fa-check' %>"></i>
+                  </button>
+                </form>
+
+                <a href="/tasks/edit/<%= task._id %>" class="action-btn" title="Edit Task">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+
+                <form action="/tasks/delete/<%= task._id %>" method="POST" class="inline-form" onsubmit="return confirm('Delete this task?');">
+                  <button type="submit" class="action-btn action-btn-danger" title="Delete Task">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <div class="task-card-body">
+              <h3 class="task-title"><%= task.title %></h3>
+              <% if (task.description) { %>
+                <p class="task-description"><%= task.description %></p>
+              <% } %>
+            </div>
+
+            <div class="task-card-footer">
+              <div class="task-due-date">
+                <i class="fa-regular fa-calendar-days"></i>
+                <span>Due: <%= formattedDate %></span>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</main>
+
+<%- include('partials/footer') %>
