@@ -13,6 +13,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://krsauvi_72:sau1234@mycluster1.rqebw6q.mongodb.net/taskdb?appName=MyCluster1';
 
+// Enable trust proxy for Render reverse proxy HTTPS load balancing
+app.enable('trust proxy');
+
 /**
  * Express Middleware Setup
  */
@@ -88,5 +91,5 @@ app.use((err, req, res, next) => {
  * Start Express Web Server
  */
 app.listen(PORT, () => {
-  console.log(`🚀 Task Tracker server running on http://localhost:${PORT}`);
+  console.log(`🚀 Task Tracker server running on port ${PORT}`);
 });

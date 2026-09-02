@@ -1,8 +1,7 @@
 # Dependencies
 node_modules/
-package-lock.json
 
-# Environment Variables (Secrets)
+# Environment Variables (Secrets - NEVER commit to git)
 .env
 
 # System & OS Files
