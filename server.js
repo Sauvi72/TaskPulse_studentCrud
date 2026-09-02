@@ -38,6 +38,7 @@ let isConnected = false;
 
 const connectDB = async () => {
   if (isConnected || mongoose.connection.readyState >= 1) {
+    isConnected = true;
     return;
   }
 
@@ -48,14 +49,30 @@ const connectDB = async () => {
     isConnected = !!conn.connections[0].readyState;
     console.log(`✅ Connected to MongoDB Atlas: ${conn.connection.host}`);
   } catch (err) {
+    isConnected = false;
     console.error(`❌ MongoDB Atlas Connection Error: ${err.message}`);
+    throw new Error(`Database connection failed: ${err.message}`);
   }
 };
 
 // Middleware to ensure Database Connection before handling any route
 app.use(async (req, res, next) => {
-  await connectDB();
-  next();
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Middleware DB Error:', err.message);
+    if (req.accepts('html')) {
+      const errorMsg = 'Database connection failed. Please verify that MongoDB Atlas IP Access List permits connections (0.0.0.0/0) and MONGO_URI environment variable is configured in Vercel.';
+      if (req.path === '/signup') {
+        return res.render('signup', { error: errorMsg, name: req.body.name || '', email: req.body.email || '' });
+      }
+      if (req.path === '/login') {
+        return res.render('login', { error: errorMsg, success: null, email: req.body.email || '' });
+      }
+    }
+    next(err);
+  }
 });
 
 /**

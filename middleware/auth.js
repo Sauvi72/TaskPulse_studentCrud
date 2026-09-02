@@ -1,12 +1,11 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 
 /**
  * Authentication Middleware:
  * Extracts JWT token from HTTP-only cookie `req.cookies.token`,
  * verifies token, and attaches user data to `req.user` and `res.locals.user`.
  */
-const requireAuth = async (req, res, next) => {
+const requireAuth = (req, res, next) => {
   const token = req.cookies.token;
 
   if (!token) {
@@ -15,23 +14,24 @@ const requireAuth = async (req, res, next) => {
 
   try {
     // Verify JWT payload
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_jwt_secret');
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'super_secret_jwt_key_student_portal_2026_x89a!'
+    );
 
-    // Optionally check if user exists in database
-    const user = await User.findById(decoded.id).select('-password');
-    if (!user) {
-      res.clearCookie('token');
-      return res.redirect('/login?error=Session expired. Please log in again.');
-    }
+    // Attach user payload directly from decoded token
+    req.user = {
+      id: decoded.id,
+      name: decoded.name,
+      email: decoded.email
+    };
 
-    // Attach user information to request and response locals (for EJS rendering)
-    req.user = { id: user._id, name: user.name, email: user.email };
     res.locals.user = req.user;
     next();
   } catch (error) {
     console.error('JWT Authentication Error:', error.message);
     res.clearCookie('token');
-    return res.redirect('/login?error=Invalid session. Please log in again.');
+    return res.redirect('/login?error=Invalid or expired session. Please log in again.');
   }
 };
 
@@ -46,7 +46,10 @@ const redirectIfAuth = (req, res, next) => {
   }
 
   try {
-    jwt.verify(token, process.env.JWT_SECRET || 'fallback_jwt_secret');
+    jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'super_secret_jwt_key_student_portal_2026_x89a!'
+    );
     return res.redirect('/dashboard');
   } catch (error) {
     res.clearCookie('token');

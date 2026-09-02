@@ -7,22 +7,21 @@ const { redirectIfAuth } = require('../middleware/auth');
 /**
  * Helper function to generate JWT and set HTTP-only cookie
  */
-const sendTokenResponse = (user, statusCode, res) => {
+const sendTokenResponse = (user, req, res) => {
   const token = jwt.sign(
-    { id: user._id, name: user.name, email: user.email },
-    process.env.JWT_SECRET || 'fallback_jwt_secret',
+    { id: user._id.toString(), name: user.name, email: user.email },
+    process.env.JWT_SECRET || 'super_secret_jwt_key_student_portal_2026_x89a!',
     { expiresIn: '24h' }
   );
+
+  const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
 
   const cookieOptions = {
     expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 Hours
     httpOnly: true,
-    sameSite: 'strict'
+    sameSite: 'lax',
+    secure: isSecure
   };
-
-  if (process.env.NODE_ENV === 'production') {
-    cookieOptions.secure = true;
-  }
 
   res.cookie('token', token, cookieOptions);
   res.redirect('/dashboard');
@@ -48,7 +47,6 @@ router.post('/signup', redirectIfAuth, async (req, res) => {
   const { name, email, password, confirmPassword } = req.body;
 
   try {
-    // Basic validations
     if (!name || !email || !password) {
       return res.render('signup', {
         error: 'Please fill in all required fields.',
@@ -83,21 +81,21 @@ router.post('/signup', redirectIfAuth, async (req, res) => {
       });
     }
 
-    // Create user (password is hashed in Mongoose pre-save hook)
+    // Create user
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password
     });
 
-    // Generate token and set HTTP-only cookie
-    sendTokenResponse(user, 201, res);
+    // Generate token and set cookie
+    sendTokenResponse(user, req, res);
   } catch (error) {
     console.error('Signup Error:', error);
     res.render('signup', {
       error: error.message || 'An error occurred during registration.',
-      name,
-      email
+      name: name || '',
+      email: email || ''
     });
   }
 });
@@ -126,7 +124,7 @@ router.post('/login', redirectIfAuth, async (req, res) => {
       return res.render('login', {
         error: 'Please provide both email address and password.',
         success: null,
-        email
+        email: email || ''
       });
     }
 
@@ -151,13 +149,13 @@ router.post('/login', redirectIfAuth, async (req, res) => {
     }
 
     // Generate token and redirect to dashboard
-    sendTokenResponse(user, 200, res);
+    sendTokenResponse(user, req, res);
   } catch (error) {
     console.error('Login Error:', error);
     res.render('login', {
-      error: 'An unexpected error occurred during login.',
+      error: error.message || 'An unexpected error occurred during login.',
       success: null,
-      email
+      email: email || ''
     });
   }
 });
