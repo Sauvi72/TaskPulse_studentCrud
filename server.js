@@ -13,13 +13,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://krsauvi_72:sau1234@mycluster1.rqebw6q.mongodb.net/taskdb?appName=MyCluster1';
 
-// Enable trust proxy for Render reverse proxy HTTPS load balancing
+// Enable trust proxy for Vercel / Render HTTPS load balancers
 app.enable('trust proxy');
 
 /**
  * Express Middleware Setup
  */
-app.use(cors()); // Enable Cross-Origin Resource Sharing
+app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
@@ -32,19 +32,31 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 /**
- * MongoDB Atlas Connection
+ * Global MongoDB Atlas Connection Caching
  */
+let isConnected = false;
+
 const connectDB = async () => {
+  if (isConnected || mongoose.connection.readyState >= 1) {
+    return;
+  }
+
   try {
-    const conn = await mongoose.connect(MONGO_URI);
+    const conn = await mongoose.connect(MONGO_URI, {
+      serverSelectionTimeoutMS: 5000 // Timeout after 5 seconds instead of hanging
+    });
+    isConnected = !!conn.connections[0].readyState;
     console.log(`✅ Connected to MongoDB Atlas: ${conn.connection.host}`);
   } catch (err) {
-    console.error(`❌ MongoDB Connection Error: ${err.message}`);
+    console.error(`❌ MongoDB Atlas Connection Error: ${err.message}`);
   }
 };
 
-// Initiate Database Connection
-connectDB();
+// Middleware to ensure Database Connection before handling any route
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 /**
  * Application Routes
@@ -93,3 +105,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Task Tracker server running on port ${PORT}`);
 });
+
+module.exports = app;
